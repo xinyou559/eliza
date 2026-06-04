@@ -1,3 +1,69 @@
+# x-bot — elizaOS agent project
+
+This is the **x-bot** project: a Chinese tech-personality AI agent that posts to
+X (Twitter) autonomously. Built on elizaOS, powered by DeepSeek V4.
+
+## Quick start
+
+```bash
+./start-x-bot.sh
+```
+
+Or manually:
+
+```bash
+ELIZA_AGENT_CHARACTER_JSON=$(bun -e "import f from'fs';console.log(JSON.stringify(JSON.parse(f.readFileSync('characters/x-bot.character.json','utf-8'))))") \
+  bun run --cwd packages/agent start
+```
+
+The agent requires a `~/.local/state/eliza/eliza.json` with the X connector
+enabled (the start script creates it automatically):
+
+```json
+{ "connectors": { "x": { "enabled": true } } }
+```
+
+API server: `http://localhost:2138` (control UI at same address).
+
+## x-bot project files
+
+```
+.env                              # API keys (DeepSeek, Twitter) + behavior config
+characters/x-bot.character.json   # Agent personality: name, bio, style, examples
+start-x-bot.sh                    # Boot script (injects character + connector config)
+data/pglite/                      # Local PGlite database
+```
+
+## Key env vars for x-bot
+
+| Variable | Purpose |
+|---|---|
+| `OPENAI_API_KEY` | DeepSeek API key (reuses OpenAI plugin via `OPENAI_BASE_URL`) |
+| `OPENAI_BASE_URL` | `https://api.deepseek.com/v1` |
+| `SMALL_MODEL` / `MEDIUM_MODEL` / `LARGE_MODEL` | `deepseek-v4-flash` / `deepseek-v4-pro` |
+| `TWITTER_AUTH_MODE` | `env` (OAuth 1.0a) |
+| `TWITTER_API_KEY` / `_SECRET_KEY` / `_ACCESS_TOKEN` / `_ACCESS_TOKEN_SECRET` | X API credentials |
+| `TWITTER_DRY_RUN` | `true` = simulate only, no real posts |
+| `TWITTER_ENABLE_POST` | `true` = auto-generate and post tweets |
+| `TWITTER_POST_INTERVAL_MIN` / `MAX` | Random interval range in minutes (90–180) |
+
+## Character injection
+
+The character JSON is passed via `ELIZA_AGENT_CHARACTER_JSON` env var at boot.
+It merges into `config.agents.list[0]` via `applySandboxCharacterFromEnv()`
+(`packages/agent/src/runtime/sandbox-character.ts`). Fields: `name`, `username`,
+`bio`, `system`, `topics`, `adjectives`, `style` (with `all`/`chat`/`post`
+sub-styles), `postExamples`, `messageExamples`, `plugins`, `settings`.
+
+## DeepSeek as OpenAI provider
+
+DeepSeek's API is OpenAI-compatible. Set `OPENAI_BASE_URL` to route all OpenAI
+plugin calls to DeepSeek. Model names: `deepseek-v4-flash` (fast/cheap),
+`deepseek-v4-pro` (capable). Embeddings are handled by a local GGUF model
+(`gte-small`) since DeepSeek lacks an embeddings endpoint.
+
+---
+
 # elizaOS — repository guide for agents
 
 This is the **elizaOS** monorepo: an open-source framework for building and
